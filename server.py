@@ -61,6 +61,11 @@ def translate(text: str, from_code: str, to_code: str) -> str:
     return argostranslate.translate.translate(text, from_code, to_code)
 
 
+def to_single_line(text: str) -> str:
+    """Replace the line breaks Argos preserves with spaces."""
+    return text.replace("\n", " ")
+
+
 def build_ui() -> gr.Blocks:
     names = language_names()
     choices = [
@@ -103,10 +108,18 @@ def build_ui() -> gr.Blocks:
         result = gr.Textbox(
             label="3. Back in the source language", lines=8, buttons=["copy"]
         )
+        with gr.Row():
+            single_line = gr.Checkbox(label="Remove line breaks from result")
+            copy_btn = gr.Button("Copy result")
         status = gr.Markdown()
 
+        def apply_single_line(text, single_line):
+            if single_line:
+                return to_single_line(text)
+            return text
+
         def round_trip(source_text, intermediate_text, result_text, prev_snapshot,
-                       source_code, pivot_code):
+                       source_code, pivot_code, single_line):
             if source_code == pivot_code:
                 return (
                     intermediate_text,
@@ -128,14 +141,14 @@ def build_ui() -> gr.Blocks:
             back = translate(middle, pivot_code, source_code)
             return (
                 middle,
-                back,
+                apply_single_line(back, single_line),
                 snapshot,
                 f"Translated {names[source_code]} → {names[pivot_code]} "
                 f"→ {names[source_code]}.",
             )
 
         def from_pivot(source_text, intermediate_text, result_text, prev_snapshot,
-                       source_code, pivot_code):
+                       source_code, pivot_code, single_line):
             if source_code == pivot_code:
                 return (
                     result_text,
@@ -151,8 +164,9 @@ def build_ui() -> gr.Blocks:
             snapshot = [source_text, intermediate_text, result_text]
             ensure_language(source_code)
             ensure_language(pivot_code)
+            back = translate(intermediate_text, pivot_code, source_code)
             return (
-                translate(intermediate_text, pivot_code, source_code),
+                apply_single_line(back, single_line),
                 snapshot,
                 f"Translated {names[pivot_code]} → {names[source_code]}.",
             )
@@ -165,7 +179,10 @@ def build_ui() -> gr.Blocks:
         def clear():
             return "", "", "", None, ""
 
-        full_inputs = [source, intermediate, result, undo_state, source_lang, pivot_lang]
+        full_inputs = [
+            source, intermediate, result, undo_state, source_lang, pivot_lang,
+            single_line,
+        ]
         round_trip_outputs = [intermediate, result, undo_state, status]
         round_trip_btn.click(round_trip, full_inputs, round_trip_outputs)
         source.submit(round_trip, full_inputs, round_trip_outputs)
@@ -175,6 +192,12 @@ def build_ui() -> gr.Blocks:
         )
         clear_btn.click(
             clear, None, [source, intermediate, result, undo_state, status]
+        )
+        single_line.change(apply_single_line, [result, single_line], [result])
+        copy_btn.click(
+            fn=None,
+            inputs=[result],
+            js="(text) => navigator.clipboard.writeText(text)",
         )
 
     return demo

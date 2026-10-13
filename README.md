@@ -38,6 +38,12 @@ venv/bin/python server.py --port 7861
   *Re-translate intermediate → source* to redo only the second step.
 - **Undo** restores the three text boxes to their contents before the last
   translation; **Clear** empties them. Neither touches the language dropdowns.
+- **Remove line breaks from result** rewrites box 3 as one line, replacing the
+  line breaks Argos keeps with spaces. It applies to the next translation and to
+  whatever is already in box 3 when you tick it; unticking does not put the
+  breaks back.
+- **Copy result** copies box 3 to the clipboard — the copy icon in the corner of
+  the box does the same.
 
 ## Notes
 
